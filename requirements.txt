@@ -1,0 +1,17 @@
+# Core numerics and data handling
+numpy>=1.24
+pandas>=2.0
+
+# Splitting, scaling, Random Forest, deep MLP, permutation importance, metrics
+scikit-learn>=1.3
+
+# The three gradient-boosting detectors
+xgboost>=2.0
+lightgbm>=4.0
+catboost>=1.2
+
+# Saving trained detectors to disk
+joblib>=1.3
+
+# Figures
+matplotlib>=3.7

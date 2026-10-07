@@ -5,10 +5,10 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Jatinkumar78/Accuracy-Is-Not-Robustness/blob/main/notebooks/accuracy_is_not_robustness.ipynb)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Paper](https://img.shields.io/badge/paper-PDF-red.svg)](paper/paper.pdf)
+[![Paper](https://img.shields.io/badge/paper-PDF-red.svg)](paper/paper_with_authors.pdf)
 
 > Six phishing detectors. Two datasets. Two attackers.
-> Every model scores 87–99% on clean data, and that number predicts almost nothing
+> Every model scores between 82% and 99% on clean data, and that number predicts almost nothing
 > about what happens when an attacker starts editing.
 
 ---
@@ -18,11 +18,11 @@
 Machine-learning phishing detectors are routinely reported at 97–99% accuracy, and on the
 usual benchmarks the problem looks solved. This repository tests whether that number
 survives contact with an adversary who edits only the parts of a URL and page that an
-attacker actually authors. It does not. On one dataset detection collapses from **98.50%
-to 66.50%** under a perturbation that leaves the other dataset completely unmoved, and the
-same convolutional architecture turns out to be the *most* robust model on one dataset and
-the *least* robust on the other. What explains the difference is not the algorithm but
-**where the model finds its signal**.
+attacker actually authors. It does not. On one dataset the tree ensembles' detection
+collapses from about **98.5% to 66–69%** under a perturbation that leaves the other dataset
+completely unmoved, and the same convolutional architecture is the *hardest* model to evade
+on one dataset and the *easiest* on the other. The difference follows **where the model
+finds its signal**, whichever algorithm is used.
 
 ---
 
@@ -30,10 +30,10 @@ the *least* robust on the other. What explains the difference is not the algorit
 
 | Path | What is in it |
 |:--|:--|
-| `notebooks/` | The full Colab notebook, runs end to end in ~15 minutes |
+| `notebooks/` | `accuracy_is_not_robustness.ipynb`, the main six-detector run (about 12–20 minutes on Colab), and `phishing_adversarial_robustness.ipynb`, the four-ensemble run behind the defence results and the five-seed check |
 | `paper/` | The LaTeX source and compiled PDF |
 | `results/` | Every measured number as JSON |
-| `figures/` | Publication-quality PNG and PDF |
+| `figures/` | The paper's two figures as EPS and PDF |
 | `models/` | Trained detectors, produced by the notebook |
 
 ---
@@ -124,7 +124,7 @@ projected back into the space of legal feature vectors before it counts.
 | LightGBM | 98.55 | **95.80** |
 | CatBoost | 98.65 | 94.55 |
 | Deep MLP | 97.40 | 94.87 |
-| 1D-CNN | 93.45 | 87.43 |
+| 1D-CNN | 90.45 | 81.64 |
 
 *Accuracy (%). The four tree ensembles sit inside a band narrower than seed-to-seed noise.*
 
@@ -135,7 +135,7 @@ projected back into the space of legal feature vectors before it counts.
 | Random Forest | 98.2 → **68.4** | 96.5 → 96.5 |
 | XGBoost | 98.9 → **69.3** | 95.3 → 95.3 |
 | LightGBM | 98.5 → **69.3** | 96.0 → 96.0 |
-| CatBoost | 98.9 → **66.5** | 95.1 → 95.1 |
+| CatBoost | 98.9 → **66.3** | 95.1 → 95.1 |
 
 *Phishing detection rate (%) under the transfer attack. Dataset A collapses at the smallest
 budget tested. Dataset B does not move at all.*
@@ -144,37 +144,43 @@ budget tested. Dataset B does not move at all.*
 
 | Model | A: evadable | A: median L2 | B: evadable | B: median L2 |
 |:--|--:|--:|--:|--:|
-| Random Forest | 94.8% | 2.64 | **57.8%** | 5.86 |
-| XGBoost | 99.0% | 1.85 | 90.0% | 5.85 |
-| LightGBM | 99.0% | 2.03 | 80.8% | 5.71 |
-| CatBoost | 95.0% | 1.58 | 81.2% | **5.96** |
-| Deep MLP | 98.0% | 1.85 | 81.8% | 4.38 |
-| 1D-CNN | **70.0%** | 2.50 | 99.0% | 3.54 |
+| Random Forest | 94.75% | 2.64 | **57.75%** | 5.86 |
+| XGBoost | 99.00% | 1.85 | 90.00% | 5.85 |
+| LightGBM | 99.00% | 2.03 | 80.75% | 5.71 |
+| CatBoost | 95.00% | 1.58 | 81.25% | **5.96** |
+| Deep MLP | 98.00% | 1.85 | 81.75% | 4.38 |
+| 1D-CNN | **84.25%** | 2.10 | **100.00%** | 2.78 |
 
-*Median L2 is what the attacker must spend. Higher is more robust. On Dataset B more than
-40% of phishing pages cannot be evaded by Random Forest at all.*
+*Median L2 is what the attacker must spend. Higher is more robust. Each attack used 400
+phishing pages, so every percentage is a multiple of 0.25. On Dataset B the attack found no
+evasion at all for more than 40% of phishing pages against Random Forest.*
 
 ### 4. The finding that explains it
 
 | Model | Dataset A | Dataset B |
 |:--|--:|--:|
-| LightGBM, impurity importance | **76.0%** | **26.9%** |
-| LightGBM, permutation importance | 62.1% | — |
-| Random Forest, impurity importance | 58.4% | 63.0% |
+| LightGBM, built-in importance (split counts) | **76.6%** | **26.9%** |
+| LightGBM, permutation importance | 66.2% | 46.0% |
+| Random Forest, built-in importance (impurity) | 59.5% | 63.0% |
+| Random Forest, permutation importance | 55.8% | 33.2% |
 
 *Share of the model's decision sitting on attacker-controllable features. The fragile model
 draws three-quarters of its signal from territory the attacker owns; the robust one draws
 about a quarter. Permutation importance is reported as the conservative check.*
 
-### 5. The defence, including the part that did not work
+### 5. The defence, checked against an attack it never saw
 
-| Dataset | Clean accuracy | Transfer @ ε=0.3 | Black-box median L2 |
-|:--|:--|:--|:--|
-| A | 98.55 → 98.65 | 69.3 → **99.7** | 2.03 → **2.84** |
-| B | 95.80 → 95.03 | 89.8 → **99.9** | 5.71 → **3.70** ⚠ |
+| Dataset | Clean accuracy | Transfer @ ε=0.3 | Black-box evadable | Black-box median L2 |
+|:--|:--|:--|:--|:--|
+| A | 98.55 → 98.65 | 69.3 → **99.7** | 99.00% → 97.25% | 2.03 → **2.84** |
+| B | 95.80 → 95.03 | 89.8 → **99.9** | 80.75% → **27.25%** | 5.71 → 3.70 ⚠ |
 
-*Adversarial training worked on Dataset A and made black-box evasion **cheaper** on Dataset
-B. Measuring only the attack it trained against would have reported a clean win on both.*
+*Against the attack it was trained on, the defence looks close to perfect on both datasets.
+The Boundary attack it never saw gives a more mixed answer on Dataset B: far fewer pages can
+be evaded, but the ones that still can need a smaller perturbation than before. These figures
+come from `notebooks/phishing_adversarial_robustness.ipynb`, a run limited to the four tree
+ensembles with the same seed. The main run hardens its own copy of LightGBM and agrees: black-box
+median L2 rises from 2.03 to 2.97 on Dataset A and falls from 5.71 to 3.84 on Dataset B.*
 
 ---
 
@@ -183,8 +189,9 @@ B. Measuring only the attack it trained against would have reported a clean win 
 **Stop quoting accuracy on its own.** Across two datasets it predicted neither the size of
 the drop, nor which model held up best, nor whether the defence would help.
 
-**Robustness lives in the feature representation.** The 1D-CNN is the most robust model on
-one dataset and the least robust on the other. Same architecture, opposite verdicts.
+**Robustness lives in the feature representation.** The 1D-CNN is the hardest model to
+evade on one dataset and the only one every single page evades on the other. Same
+architecture, opposite verdicts.
 
 **There is a number you can measure before you deploy.** Compute the share of your model's
 importance sitting on attacker-controllable features. Where it is high, add signals the
@@ -230,13 +237,16 @@ go missing. Dataset B downloads at runtime with a retry.
 
 ## Reproducibility
 
-Everything is seeded. A full pass takes about 83 seconds on Dataset A and 209 seconds on
-Dataset B on a single CPU core.
+Everything is seeded (seed 42). On a standard Colab CPU runtime, one pass of the main
+notebook took 122 seconds on Dataset A and 343 seconds on Dataset B.
 
-One deviation worth stating plainly: on Dataset B the 1D-CNN was trained on a
-10,000-instance stratified subsample of the training split to bound its cost. Its absolute
-accuracy on that dataset is therefore a lower bound rather than a converged estimate. Every
-other number comes from the full training split.
+Most numbers in this README and in the paper come from one run of
+`notebooks/accuracy_is_not_robustness.ipynb`, covering all six detectors on both datasets.
+Two results come from the companion notebook `notebooks/phishing_adversarial_robustness.ipynb`,
+a run limited to the four tree ensembles with the same seed: the adversarial-training results
+and the five-seed reliability check. Its LightGBM baseline matches the main run to within 0.2
+percentage points. The raw numbers are in `results/`: `results.json` is the file the main
+notebook writes, and `four_ensemble_results.json` the companion run's.
 
 ---
 
